@@ -21,10 +21,12 @@ import {
   createWhereParams,
   createGroupByParams,
   CreateParams,
+  bootstrapModels,
 } from "./helpers/createParams";
 
 import { Config, ModelConfig } from "./types";
 import { ModifyResult, modifyReadResult } from "./helpers/modifyResult";
+import { getDmmf, setDmmf } from "./utils/dmmf";
 
 type ConfigBound<F> = F extends (x: ModelConfig, ...args: infer P) => infer R
   ? (...args: P) => R
@@ -54,7 +56,12 @@ export function createSoftDeleteExtension({
     allowToOneUpdates: false,
     allowCompoundUniqueIndexWhere: false,
   },
+  dmmf,
 }: Config) {
+  if (!!dmmf) {
+    setDmmf(dmmf);
+  }
+
   if (!defaultConfig.field) {
     throw new Error(
       "prisma-extension-soft-delete: defaultConfig.field is required"
@@ -65,6 +72,8 @@ export function createSoftDeleteExtension({
       "prisma-extension-soft-delete: defaultConfig.createValue is required"
     );
   }
+
+  bootstrapModels();
 
   const modelNames = Object.keys(models) as Prisma.ModelName[];
 
@@ -120,8 +129,8 @@ export function createSoftDeleteExtension({
   return Prisma.defineExtension((client) =>
     client.$extends({
       name: "prisma-extension-soft-delete",
-      model: Prisma.dmmf.datamodel.models
-        .map((modelDef) => modelDef.name)
+      model: getDmmf()
+        .datamodel.models.map((modelDef) => modelDef.name)
         .reduce(function (modelsAcc, configModelName) {
           const modelName =
             configModelName[0].toLowerCase() + configModelName.slice(1);

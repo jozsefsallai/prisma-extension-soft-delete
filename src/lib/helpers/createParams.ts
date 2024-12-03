@@ -1,29 +1,33 @@
-import { Prisma } from "@prisma/client";
 import { NestedParams } from "prisma-extension-nested-operations";
 
 import { ModelConfig } from "../types";
 import { addDeletedToSelect } from "../utils/nestedReads";
+import { getDmmf } from "../utils/dmmf";
 
 const uniqueFieldsByModel: Record<string, string[]> = {};
 const uniqueIndexFieldsByModel: Record<string, string[]> = {};
 
-Prisma.dmmf.datamodel.models.forEach((model) => {
-  // add unique fields derived from indexes
-  const uniqueIndexFields: string[] = [];
-  model.uniqueFields.forEach((field) => {
-    uniqueIndexFields.push(field.join("_"));
-  });
-  uniqueIndexFieldsByModel[model.name] = uniqueIndexFields;
+export function bootstrapModels() {
+  const dmmf = getDmmf();
 
-  // add id field and unique fields from @unique decorator
-  const uniqueFields: string[] = [];
-  model.fields.forEach((field) => {
-    if (field.isId || field.isUnique) {
-      uniqueFields.push(field.name);
-    }
+  dmmf.datamodel.models.forEach((model) => {
+    // add unique fields derived from indexes
+    const uniqueIndexFields: string[] = [];
+    model.uniqueFields.forEach((field) => {
+      uniqueIndexFields.push(field.join("_"));
+    });
+    uniqueIndexFieldsByModel[model.name] = uniqueIndexFields;
+
+    // add id field and unique fields from @unique decorator
+    const uniqueFields: string[] = [];
+    model.fields.forEach((field) => {
+      if (field.isId || field.isUnique) {
+        uniqueFields.push(field.name);
+      }
+    });
+    uniqueFieldsByModel[model.name] = uniqueFields;
   });
-  uniqueFieldsByModel[model.name] = uniqueFields;
-});
+}
 
 export type Params = Omit<NestedParams<any>, "operation"> & {
   operation: string;
